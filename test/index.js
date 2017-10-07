@@ -61,11 +61,20 @@ describe('Kinesis Client Library', function () {
       stdout += chunk
     })
 
-    // Give an arbitrarily large amount of time for all the consumers to spin up
-    setTimeout(function () {
+    function getCurrentlyReadLyricsLength () {
       var lyrics = stdout.match(/Line: /g)
-      assert.equal(lyrics.length, helpers.fixtures.records.length, 'Write one line per lyric')
-      done()
-    }, 30000)
+      return lyrics ? lyrics.length : 0
+    }
+
+    let lyricsLength = 0
+    helpers.poll(() => {
+      lyricsLength = getCurrentlyReadLyricsLength()
+      return lyricsLength === helpers.fixtures.records.length
+    }, 30000, 100)
+      .then(() => {
+        assert.equal(lyricsLength, helpers.fixtures.records.length, 'Write one line per lyric')
+        done()
+      })
+      .catch(() => done('Timed out waiting for lyrics to be read.'))
   })
 })
